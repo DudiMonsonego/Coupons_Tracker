@@ -1,0 +1,93 @@
+import { NextResponse } from "next/server";
+
+import { normalizeCategory } from "@/lib/coupons/categories";
+import { finalizeCouponImage } from "@/lib/coupons/finalize-coupon-image";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
+
+export async function POST(request: Request) {
+  const formData = await request.formData();
+  const title = String(formData.get("title") ?? "").trim();
+  const code = String(formData.get("code") ?? "").trim();
+  const expiryDate = String(formData.get("expiry_date") ?? "").trim();
+  const notes = String(formData.get("notes") ?? "").trim();
+  const tagsCsv = String(formData.get("tags") ?? "").trim();
+  const category = normalizeCategory(formData.get("category"));
+  const draftImagePath = String(formData.get("draft_image_path") ?? "").trim();
+  const imageField = formData.get("image");
+
+  const tags = Array.from(
+    new Set(
+      tagsCsv
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  const supabase = await createSupabaseServerClient();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) {
+    return NextResponse.redirect(new URL("/login", request.url), 303);
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("household_id")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+
+  if (!profile?.household_id) {
+    return NextResponse.redirect(new URL("/onboarding/household", request.url), 303);
+  }
+
+  if (!title) {
+    return NextResponse.redirect(new URL("/coupons", request.url), 303);
+  }
+
+  const { data: created, error } = await supabase
+    .from("coupons")
+    .insert({
+      household_id: profile.household_id,
+      title,
+      code: code || null,
+      expiry_date: expiryDate || null,
+      notes: notes || null,
+      tags,
+      category,
+    })
+    .select("id")
+    .single();
+
+  if (error || !created) {
+    return NextResponse.json(error ?? { message: "Insert failed" }, { status: 500 });
+  }
+
+  try {
+    const imagePath = await finalizeCouponImage(supabase, profile.household_id, created.id, {
+      draftImagePath: draftImagePath || undefined,
+      imageFile: imageField instanceof File ? imageField : undefined,
+    });
+
+    if (imagePath) {
+      const { error: imgErr } = await supabase
+        .from("coupons")
+        .update({ image_path: imagePath })
+        .eq("id", created.id);
+      if (imgErr) {
+        return NextResponse.json(imgErr, { status: 500 });
+      }
+    }
+  } catch (imgError) {
+    await supabase.from("coupons").delete().eq("id", created.id);
+    return NextResponse.json(
+      { message: imgError instanceof Error ? imgError.message : "Image upload failed" },
+      { status: 500 },
+    );
+  }
+
+  const referer = request.headers.get("referer");
+  const dest = referer?.includes("/coupons/import") ? "/dashboard" : "/coupons?saved=1";
+  return NextResponse.redirect(new URL(dest, request.url), 303);
+}
