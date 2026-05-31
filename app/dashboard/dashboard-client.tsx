@@ -47,10 +47,16 @@ function formatExpiry(date: string | null) {
 }
 
 export function DashboardClient({ coupons, expiringSoonDays }: Props) {
+  const [items, setItems] = useState(coupons);
   const [tab, setTab] = useState<Tab>("active");
   const [view, setView] = useState<View>("grid");
   const [q, setQ] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setItems(coupons);
+  }, [coupons]);
 
   useEffect(() => {
     try {
@@ -58,6 +64,50 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
       if (v === "grid" || v === "list") setView(v);
     } catch {}
   }, []);
+
+  async function toggleUsed(id: string) {
+    const snapshot = items;
+    setBusyId(id);
+    setItems((list) =>
+      list.map((c) => (c.id === id ? { ...c, is_used: !c.is_used } : c)),
+    );
+    try {
+      const res = await fetch("/api/coupons/toggle-used", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.message ?? "Failed");
+    } catch {
+      setItems(snapshot);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteCoupon(id: string) {
+    if (!confirm("למחוק את הקופון?")) return;
+
+    const snapshot = items;
+    setBusyId(id);
+    setItems((list) => list.filter((c) => c.id !== id));
+    if (editingId === id) setEditingId(null);
+
+    try {
+      const res = await fetch("/api/coupons/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) throw new Error(json.message ?? "Failed");
+    } catch {
+      setItems(snapshot);
+    } finally {
+      setBusyId(null);
+    }
+  }
 
   useEffect(() => {
     try {
@@ -67,7 +117,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
 
   const filtered = useMemo(() => {
     const qq = q.trim().toLowerCase();
-    return coupons
+    return items
       .map((c) => ({
         ...c,
         status: getCouponStatus({
@@ -87,7 +137,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
           tags.includes(qq)
         );
       });
-  }, [coupons, expiringSoonDays, q, tab]);
+  }, [items, expiringSoonDays, q, tab]);
 
   return (
     <div className="space-y-6">
@@ -236,22 +286,25 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
 
               <div className="mt-4 flex flex-col gap-2">
                 <div className="flex flex-wrap gap-2">
-                <form action="/coupons/toggle-used" method="post">
-                  <input type="hidden" name="id" value={c.id} />
-                  <Button size="sm" variant="outline" type="submit">
-                    {c.is_used ? (
-                      <>
-                        <Circle className="h-4 w-4" />
-                        סמן כלא שומש
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4" />
-                        סמן כמשומש
-                      </>
-                    )}
-                  </Button>
-                </form>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busyId === c.id}
+                  onClick={() => toggleUsed(c.id)}
+                >
+                  {c.is_used ? (
+                    <>
+                      <Circle className="h-4 w-4" />
+                      סמן כלא שומש
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      סמן כמשומש
+                    </>
+                  )}
+                </Button>
 
                 <Button
                   type="button"
@@ -263,19 +316,16 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
                   עריכה
                 </Button>
 
-                <form
-                  action="/coupons/delete"
-                  method="post"
-                  onSubmit={(e) => {
-                    if (!confirm("למחוק את הקופון?")) e.preventDefault();
-                  }}
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="destructive"
+                  disabled={busyId === c.id}
+                  onClick={() => deleteCoupon(c.id)}
                 >
-                  <input type="hidden" name="id" value={c.id} />
-                  <Button size="sm" variant="destructive" type="submit">
-                    <Trash2 className="h-4 w-4" />
-                    מחיקה
-                  </Button>
-                </form>
+                  <Trash2 className="h-4 w-4" />
+                  מחיקה
+                </Button>
                 </div>
 
                 {editingId === c.id ? (
