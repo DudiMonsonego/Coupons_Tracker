@@ -2,7 +2,7 @@
 
 Hebrew RTL web app for managing household coupons together — or in a private solo account.
 
-**Live app:** [https://coupons-tracker.vercel.app](https://coupons-tracker.vercel.app)
+**Live app:** [https://coupons-tracker-six.vercel.app](https://coupons-tracker-six.vercel.app)
 
 **Repository:** [github.com/DudiMonsonego/Coupons_Tracker](https://github.com/DudiMonsonego/Coupons_Tracker)
 
