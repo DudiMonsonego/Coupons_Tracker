@@ -101,7 +101,5 @@ export async function POST(request: Request) {
     );
   }
 
-  const referer = request.headers.get("referer");
-  const dest = referer?.includes("/coupons/import") ? "/dashboard" : "/coupons?saved=1";
-  return NextResponse.redirect(new URL(dest, request.url), 303);
+  return NextResponse.redirect(new URL("/?saved=1", request.url), 303);
 }

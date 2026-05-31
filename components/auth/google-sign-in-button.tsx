@@ -14,7 +14,7 @@ export function GoogleSignInButton({
       href={href}
       className={
         className ??
-        "inline-flex h-11 w-full items-center justify-center gap-3 rounded-md border border-[#747775] bg-white px-4 text-sm font-medium text-[#1f1f1f] shadow-sm transition hover:bg-[#f8faff] hover:shadow-md"
+        "inline-flex h-11 w-full cursor-pointer touch-manipulation select-none items-center justify-center gap-3 rounded-md border border-[#747775] bg-white px-4 text-sm font-medium text-[#1f1f1f] shadow-sm transition hover:bg-[#f8faff] hover:shadow-md active:scale-[0.98]"
       }
     >
       <GoogleLogo />

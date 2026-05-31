@@ -50,6 +50,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
   const [tab, setTab] = useState<Tab>("active");
   const [view, setView] = useState<View>("grid");
   const [q, setQ] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -103,6 +104,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
 
         <div className="flex items-center gap-2">
           <Button
+            type="button"
             variant={view === "grid" ? "secondary" : "outline"}
             size="sm"
             onClick={() => setView("grid")}
@@ -111,6 +113,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
             קוביות
           </Button>
           <Button
+            type="button"
             variant={view === "list" ? "secondary" : "outline"}
             size="sm"
             onClick={() => setView("list")}
@@ -123,6 +126,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
 
       <div className="flex flex-wrap gap-2">
         <Button
+          type="button"
           size="sm"
           variant={tab === "active" ? "secondary" : "outline"}
           onClick={() => setTab("active")}
@@ -130,6 +134,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
           פעיל
         </Button>
         <Button
+          type="button"
           size="sm"
           variant={tab === "expiring" ? "secondary" : "outline"}
           onClick={() => setTab("expiring")}
@@ -137,6 +142,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
           פוקע בקרוב
         </Button>
         <Button
+          type="button"
           size="sm"
           variant={tab === "used" ? "secondary" : "outline"}
           onClick={() => setTab("used")}
@@ -144,6 +150,7 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
           שומש
         </Button>
         <Button
+          type="button"
           size="sm"
           variant={tab === "archived" ? "secondary" : "outline"}
           onClick={() => setTab("archived")}
@@ -227,7 +234,8 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
                 </div>
               ) : null}
 
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-4 flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
                 <form action="/coupons/toggle-used" method="post">
                   <input type="hidden" name="id" value={c.id} />
                   <Button size="sm" variant="outline" type="submit">
@@ -245,14 +253,33 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
                   </Button>
                 </form>
 
-                <details className="group">
-                  <summary className="list-none">
-                    <Button size="sm" variant="outline" type="button">
-                      <Pencil className="h-4 w-4" />
-                      עריכה
-                    </Button>
-                  </summary>
-                  <div className="mt-3 rounded-2xl border border-black/10 bg-zinc-50 p-3 dark:border-white/10 dark:bg-black">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditingId(editingId === c.id ? null : c.id)}
+                >
+                  <Pencil className="h-4 w-4" />
+                  עריכה
+                </Button>
+
+                <form
+                  action="/coupons/delete"
+                  method="post"
+                  onSubmit={(e) => {
+                    if (!confirm("למחוק את הקופון?")) e.preventDefault();
+                  }}
+                >
+                  <input type="hidden" name="id" value={c.id} />
+                  <Button size="sm" variant="destructive" type="submit">
+                    <Trash2 className="h-4 w-4" />
+                    מחיקה
+                  </Button>
+                </form>
+                </div>
+
+                {editingId === c.id ? (
+                  <div className="w-full rounded-2xl border border-black/10 bg-zinc-50 p-3 dark:border-white/10 dark:bg-black">
                     <form action="/coupons/update" method="post" className="space-y-3">
                       <input type="hidden" name="id" value={c.id} />
                       <div className="space-y-2">
@@ -327,33 +354,14 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
                           size="sm"
                           type="button"
                           variant="outline"
-                          onClick={(e) => {
-                            const details = (e.currentTarget.closest(
-                              "details",
-                            ) as HTMLDetailsElement | null);
-                            if (details) details.open = false;
-                          }}
+                          onClick={() => setEditingId(null)}
                         >
                           סגירה
                         </Button>
                       </div>
                     </form>
                   </div>
-                </details>
-
-                <form
-                  action="/coupons/delete"
-                  method="post"
-                  onSubmit={(e) => {
-                    if (!confirm("למחוק את הקופון?")) e.preventDefault();
-                  }}
-                >
-                  <input type="hidden" name="id" value={c.id} />
-                  <Button size="sm" variant="destructive" type="submit">
-                    <Trash2 className="h-4 w-4" />
-                    מחיקה
-                  </Button>
-                </form>
+                ) : null}
               </div>
             </div>
           ))}

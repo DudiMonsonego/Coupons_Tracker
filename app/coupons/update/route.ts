@@ -65,7 +65,6 @@ export async function POST(request: Request) {
     return NextResponse.json(error, { status: 500 });
   }
 
-  const referer = request.headers.get("referer");
-  return NextResponse.redirect(new URL(referer ?? "/dashboard", request.url), 303);
+  return NextResponse.redirect(new URL("/?saved=1", request.url), 303);
 }
 

@@ -8,13 +8,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCouponStatus, isShownInActiveTab } from "@/lib/coupons/status";
 import { formatMoneyILS } from "@/lib/coupons/money";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { DashboardClient } from "@/app/dashboard/dashboard-client";
 import { SchemaMissingBanner } from "@/app/dashboard/schema-missing";
 
 export const dynamic = "force-dynamic";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const sp = (await searchParams) ?? {};
+  const saved = sp.saved === "1";
+
   const session = await getSessionProfile();
   const supabase = await createSupabaseServerClient();
   const expiringSoonDays = 7;
@@ -78,6 +86,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {saved ? (
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-800 dark:text-emerald-200">
+          הקופון נשמר בהצלחה
+        </div>
+      ) : null}
+
       <div className="rounded-3xl border border-black/10 bg-gradient-to-l from-violet-600 via-fuchsia-600 to-amber-500 p-6 text-white shadow-sm dark:border-white/10">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -93,22 +107,24 @@ export default async function DashboardPage() {
             </p>
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Link href="/coupons">
-              <Button
-                variant="outline"
-                className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-              >
-                הוספת קופון
-              </Button>
+            <Link
+              href="/coupons"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "default" }),
+                "border-white/20 bg-white/10 text-white hover:bg-white/20",
+              )}
+            >
+              הוספת קופון
             </Link>
             {canManageFamilyInvites(session) ? (
-              <Link href="/settings/family">
-                <Button
-                  variant="outline"
-                  className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-                >
-                  שיתוף משפחתי
-                </Button>
+              <Link
+                href="/settings/family"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "default" }),
+                  "border-white/20 bg-white/10 text-white hover:bg-white/20",
+                )}
+              >
+                שיתוף משפחתי
               </Link>
             ) : null}
           </div>

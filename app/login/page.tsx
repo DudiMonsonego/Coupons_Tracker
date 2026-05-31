@@ -1,5 +1,4 @@
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
-import { SupabaseAuthHint } from "./supabase-auth-hint";
 
 export default async function LoginPage({
   searchParams,
@@ -36,8 +35,6 @@ export default async function LoginPage({
         <div className="mt-6">
           <GoogleSignInButton />
         </div>
-
-        <SupabaseAuthHint />
       </div>
     </div>
   );
