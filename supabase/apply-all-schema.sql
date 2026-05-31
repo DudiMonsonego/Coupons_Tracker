@@ -29,6 +29,19 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+-- RLS helpers + policies: run supabase/migrations/20260531100000_household_multi_tenant_rls.sql
+-- (coupons SELECT/UPDATE/DELETE for all household members, storage coupon-images)
+
+create or replace function public.auth_household_id()
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select p.household_id from public.profiles p where p.id = auth.uid()
+$$;
+
 create or replace function public.storage_household_id()
 returns text
 language sql
@@ -36,9 +49,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select p.household_id::text
-  from public.profiles p
-  where p.id = auth.uid()
+  select public.auth_household_id()::text
 $$;
 
 drop policy if exists "coupon_images_select_household" on storage.objects;
@@ -76,3 +87,6 @@ using (
   bucket_id = 'coupon-images'
   and (storage.foldername(name))[1] = public.storage_household_id()
 );
+
+-- Full table RLS (coupons, profiles, households, invites, notifications):
+-- see migrations/20260531100000_household_multi_tenant_rls.sql
