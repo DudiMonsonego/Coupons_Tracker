@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { SupabaseAuthHint } from "./supabase-auth-hint";
 
 export default async function LoginPage({
@@ -35,12 +34,7 @@ export default async function LoginPage({
         ) : null}
 
         <div className="mt-6">
-          <Link
-            href="/auth/login/google"
-            className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-black px-4 text-sm font-medium text-white transition-colors hover:bg-black/90 dark:bg-white dark:text-black dark:hover:bg-white/90"
-          >
-            התחברות עם Google
-          </Link>
+          <GoogleSignInButton />
         </div>
 
         <SupabaseAuthHint />

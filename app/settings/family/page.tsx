@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { canManageFamilyInvites } from "@/lib/auth/permissions";
 import { InviteGenerator } from "./invite-generator";
 import { InvitesList } from "./invites-list";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,8 +27,31 @@ export default async function FamilySettingsPage() {
     redirect("/onboarding/household");
   }
 
-  if (profile.role !== "owner") {
-    redirect("/");
+  if (!canManageFamilyInvites({ role: profile.role })) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">שיתוף משפחתי</h1>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+              רק מנהל/ת המשפחה יכול/ה ליצור קודי הזמנה ולשתף אותם עם בני המשפחה.
+            </p>
+          </div>
+          <Link href="/dashboard">
+            <Button variant="outline">חזרה</Button>
+          </Link>
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>אין הרשאה</CardTitle>
+            <CardDescription>
+              הצטרפת/ת למשפחה באמצעות קוד — אין אפשרות ליצור קודים חדשים. פנה/י
+              למנהל/ת המשפחה לקבלת הזמנה.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -48,7 +72,7 @@ export default async function FamilySettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>יצירת הזמנה</CardTitle>
-            <CardDescription>קוד חד-פעמי לשיתוף</CardDescription>
+            <CardDescription>קוד חד-פעמי לשיתוף — מנהל/ת המשפחה בלבד</CardDescription>
           </CardHeader>
           <CardContent>
             <InviteGenerator />
@@ -68,4 +92,3 @@ export default async function FamilySettingsPage() {
     </div>
   );
 }
-

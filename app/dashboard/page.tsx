@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarClock, Sparkles, TicketPercent } from "lucide-react";
 
 import { getSessionProfile } from "@/lib/auth/get-session-profile";
+import { canManageFamilyInvites } from "@/lib/auth/permissions";
 import { attachCouponImageUrls } from "@/lib/coupons/attach-image-urls";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getCouponStatus, isShownInActiveTab } from "@/lib/coupons/status";
@@ -100,14 +101,16 @@ export default async function DashboardPage() {
                 הוספת קופון
               </Button>
             </Link>
-            <Link href="/settings/family">
-              <Button
-                variant="outline"
-                className="border-white/20 bg-white/10 text-white hover:bg-white/20"
-              >
-                שיתוף משפחתי
-              </Button>
-            </Link>
+            {canManageFamilyInvites(session) ? (
+              <Link href="/settings/family">
+                <Button
+                  variant="outline"
+                  className="border-white/20 bg-white/10 text-white hover:bg-white/20"
+                >
+                  שיתוף משפחתי
+                </Button>
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

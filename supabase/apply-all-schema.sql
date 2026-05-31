@@ -10,6 +10,11 @@ add column if not exists coupon_cost numeric(10, 2),
 add column if not exists brand_name text,
 add column if not exists logo_url text;
 
+-- 1b) Profile household context (family vs solo switching)
+alter table public.profiles
+add column if not exists family_household_id uuid references public.households(id),
+add column if not exists solo_household_id uuid references public.households(id);
+
 -- 2) Private image storage bucket + household isolation
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (

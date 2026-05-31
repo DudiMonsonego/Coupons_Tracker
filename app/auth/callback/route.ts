@@ -1,7 +1,8 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 
+import { restoreFamilyAccountOnLogin } from "@/lib/auth/get-session-profile";
 import { getSiteOrigin } from "@/lib/auth/site-origin";
 
 export async function GET(request: Request) {
@@ -36,12 +37,16 @@ export async function GET(request: Request) {
     },
   });
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
     return NextResponse.redirect(
       new URL(`/login?error=callback&message=${encodeURIComponent(error.message)}`, origin),
     );
+  }
+
+  if (data.user) {
+    await restoreFamilyAccountOnLogin(data.user.id);
   }
 
   return response;

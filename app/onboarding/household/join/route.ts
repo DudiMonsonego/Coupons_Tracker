@@ -62,6 +62,7 @@ export async function POST(request: Request) {
   const { error: profileError } = await admin.from("profiles").insert({
     id: auth.user.id,
     household_id: invite.household_id,
+    family_household_id: invite.household_id,
     role: "member",
     email,
     display_name: displayName,

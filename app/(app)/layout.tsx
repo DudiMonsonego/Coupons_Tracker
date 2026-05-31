@@ -3,6 +3,7 @@ import { Home, Settings, Sparkles, TicketPercent, Users } from "lucide-react";
 
 import { SignOutButton } from "@/app/components/sign-out-button";
 import { getSessionProfile } from "@/lib/auth/get-session-profile";
+import { canManageFamilyInvites } from "@/lib/auth/permissions";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ const navItems = [
   { href: "/", label: "בית", icon: Home },
   { href: "/coupons", label: "קופונים", icon: TicketPercent },
   { href: "/coupons/import", label: "ייבוא", icon: Sparkles },
-  { href: "/settings/family", label: "משפחה", icon: Users },
+  { href: "/settings/family", label: "משפחה", icon: Users, ownerOnly: true },
   { href: "/settings/household", label: "הגדרות", icon: Settings },
 ];
 
@@ -21,6 +22,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const session = await getSessionProfile();
+  const showFamilyNav = canManageFamilyInvites(session);
+  const visibleNav = navItems.filter(
+    (item) => !("ownerOnly" in item && item.ownerOnly) || showFamilyNav,
+  );
 
   return (
     <div className="min-h-dvh bg-gradient-to-b from-zinc-50 to-white dark:from-black dark:to-zinc-950">
@@ -44,7 +49,7 @@ export default async function AppLayout({
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 py-6 md:grid-cols-[220px_1fr]">
         <nav className="hidden md:block">
           <div className="space-y-1 rounded-2xl border border-black/10 bg-white p-2 shadow-sm dark:border-white/10 dark:bg-zinc-950">
-            {navItems.map(({ href, label, icon: Icon }) => (
+            {visibleNav.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}
