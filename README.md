@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# קופונים למשפחה · Coupons Tracker
 
-## Getting Started
+Hebrew RTL web app for managing household coupons together — or in a private solo account.
 
-First, run the development server:
+**Live app:** [https://coupons-tracker.vercel.app](https://coupons-tracker.vercel.app)
+
+**Repository:** [github.com/DudiMonsonego/Coupons_Tracker](https://github.com/DudiMonsonego/Coupons_Tracker)
+
+## Screenshots
+
+### Dashboard
+
+Family dashboard with stats, search, filters (active / expiring soon / used / archive), and grid or list view.
+
+![Dashboard](docs/screenshots/dashboard.png)
+
+### Add coupon
+
+Quick add with photo upload; AI fills fields from the coupon image.
+
+![Add coupon](docs/screenshots/add-coupon.png)
+
+## Features
+
+- Google sign-in and household onboarding
+- **Family sharing** — all members in the same household can view, edit, and delete shared coupons (Supabase RLS by `household_id`)
+- Optional **solo account** switch for private coupons
+- Coupon CRUD: notes, tags, used/archive, categories, value/cost, brand logo
+- Image upload and AI import (GPT vision)
+- Daily expiry reminders (Edge Function + SMTP)
+- Owner-only family invites
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) 16 (App Router), React, TypeScript
+- [Supabase](https://supabase.com) (Auth, Postgres, Storage)
+- [shadcn/ui](https://ui.shadcn.com) + Tailwind CSS (RTL)
+
+## Getting started
 
 ```bash
+cd coupons-tracker
+npm install
+cp .env.example .env
+# Fill Supabase keys and optional OPENAI_API_KEY
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Apply database schema: run `supabase/apply-all-schema.sql` and migrations in the Supabase SQL Editor (see [DEPLOY.md](./DEPLOY.md)).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Documentation
 
-## Learn More
+| Doc | Description |
+|-----|-------------|
+| [DEPLOY.md](./DEPLOY.md) | Vercel, env vars, Supabase & Google OAuth |
+| [docs/SECURITY-RLS.md](./docs/SECURITY-RLS.md) | Family multi-tenancy and RLS policies |
 
-To learn more about Next.js, take a look at the following resources:
+## Deploy
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Deploy on [Vercel](https://vercel.com) with **Root Directory** set to `coupons-tracker`. Set `NEXT_PUBLIC_SITE_URL` to your production URL (e.g. `https://coupons-tracker.vercel.app`). Details in [DEPLOY.md](./DEPLOY.md).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## License
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private project — all rights reserved unless stated otherwise.
