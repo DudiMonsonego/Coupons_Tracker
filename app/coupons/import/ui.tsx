@@ -2,21 +2,19 @@
 
 import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
-import { ImagePlus, Sparkles } from "lucide-react";
+import { Camera, Loader2, ImagePlus, Sparkles } from "lucide-react";
 
+import type { ParsedCoupon } from "@/lib/ai/parse-coupon";
+import { BrandLogo } from "@/components/coupons/brand-logo";
 import { CategorySelect } from "@/components/coupons/category-select";
+import { MoneyFields } from "@/components/coupons/money-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 
-type ParsedCoupon = {
-  title: string;
-  code?: string;
-  expiry_date?: string;
-  notes?: string;
-  tags?: string[];
-  category?: string | null;
-};
+function str(n: number | null | undefined) {
+  return n != null ? String(n) : "";
+}
 
 export function CouponImportClient() {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -32,18 +30,38 @@ export function CouponImportClient() {
   function onImageChange(file: File | null) {
     setImageFile(file);
     setImagePreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
+      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
       return file ? URL.createObjectURL(file) : null;
+    });
+    setParsed(null);
+    setDraftImagePath(null);
+
+    if (!file) return;
+
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("image", file);
+      if (text.trim()) fd.set("text", text);
+      const res = await fetch("/ai/coupon-import", { method: "POST", body: fd });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        setError(json.message ?? "שגיאה");
+        return;
+      }
+      setError(null);
+      setParsed(json.parsed);
+      setDraftImagePath(json.draftImagePath ?? null);
+      if (json.previewUrl) {
+        setStoredPreviewUrl(json.previewUrl);
+      }
     });
   }
 
-  function parse() {
+  function parseText() {
     setError(null);
     startTransition(async () => {
       const fd = new FormData();
-      if (text.trim()) fd.set("text", text);
-      if (imageFile) fd.set("image", imageFile);
-
+      fd.set("text", text);
       const res = await fetch("/ai/coupon-import", { method: "POST", body: fd });
       const json = await res.json();
       if (!res.ok || !json.ok) {
@@ -52,7 +70,6 @@ export function CouponImportClient() {
       }
       setParsed(json.parsed);
       setDraftImagePath(json.draftImagePath ?? null);
-      setStoredPreviewUrl(json.previewUrl ?? imagePreview);
     });
   }
 
@@ -60,30 +77,31 @@ export function CouponImportClient() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-dashed border-black/15 bg-zinc-50 p-4 dark:border-white/15 dark:bg-zinc-900/50">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <ImagePlus className="h-4 w-4" />
-          תמונת קופון
-        </div>
-        <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-          התמונה נשמרת ב-Supabase Storage בתיקייה של המשפחה שלך בלבד.
-        </p>
+      <div className="rounded-2xl border-2 border-dashed border-violet-400/50 bg-violet-50/80 p-4 dark:border-violet-500/30 dark:bg-violet-950/30">
         <input
           ref={fileRef}
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif"
-          className="mt-3 block w-full text-sm"
+          className="sr-only"
           onChange={(e) => onImageChange(e.target.files?.[0] ?? null)}
         />
+        <button
+          type="button"
+          onClick={() => fileRef.current?.click()}
+          className="flex w-full flex-col items-center gap-2 rounded-xl py-5 text-center"
+        >
+          {pending && imageFile ? (
+            <Loader2 className="h-9 w-9 animate-spin text-violet-600" />
+          ) : (
+            <Camera className="h-9 w-9 text-violet-600" />
+          )}
+          <span className="font-semibold text-violet-900 dark:text-violet-100">
+            העלה תמונת קופון
+          </span>
+        </button>
         {previewSrc ? (
           <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-xl border border-black/10 dark:border-white/10">
-            <Image
-              src={previewSrc}
-              alt="תצוגה מקדימה"
-              fill
-              className="object-contain"
-              unoptimized
-            />
+            <Image src={previewSrc} alt="תצוגה מקדימה" fill className="object-contain" unoptimized />
           </div>
         ) : null}
       </div>
@@ -91,17 +109,18 @@ export function CouponImportClient() {
       <Textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
-        placeholder="אופציונלי: הדבק/י טקסט מהקופון (משפר ניתוח בלי OpenAI)…"
+        placeholder="אופציונלי: טקסט מהקופון…"
       />
 
       <Button
         type="button"
-        onClick={parse}
-        disabled={pending || (!text.trim() && !imageFile)}
+        onClick={parseText}
+        disabled={pending || !text.trim()}
+        variant="outline"
         className="w-full"
       >
         <Sparkles className="h-4 w-4" />
-        ניתוח
+        ניתוח טקסט בלבד
       </Button>
 
       {error ? (
@@ -112,11 +131,33 @@ export function CouponImportClient() {
 
       {parsed ? (
         <form action="/coupons/create" method="post" encType="multipart/form-data" className="space-y-3">
-          <div className="text-sm font-semibold">טיוטה</div>
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <ImagePlus className="h-4 w-4" />
+            טיוטה
+          </div>
 
           {draftImagePath ? (
             <input type="hidden" name="draft_image_path" value={draftImagePath} />
           ) : null}
+          {parsed.logo_url ? (
+            <input type="hidden" name="logo_url" value={parsed.logo_url} />
+          ) : null}
+
+          {(parsed.brand_name || parsed.logo_url) && (
+            <div className="flex items-center gap-3 rounded-xl border border-black/10 bg-zinc-50 p-3 dark:border-white/10 dark:bg-zinc-900/50">
+              <BrandLogo brandName={parsed.brand_name} logoUrl={parsed.logo_url} size={48} />
+              <div className="flex-1 space-y-2">
+                <label className="block text-xs font-medium" htmlFor="brand_name">
+                  מותג
+                </label>
+                <Input
+                  id="brand_name"
+                  name="brand_name"
+                  defaultValue={parsed.brand_name ?? ""}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="block text-sm font-medium" htmlFor="title">
@@ -124,6 +165,11 @@ export function CouponImportClient() {
             </label>
             <Input id="title" name="title" defaultValue={parsed.title} required />
           </div>
+
+          <MoneyFields
+            valueDefault={str(parsed.coupon_value)}
+            costDefault={str(parsed.coupon_cost)}
+          />
 
           <div className="space-y-2">
             <label className="block text-sm font-medium" htmlFor="category">

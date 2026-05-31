@@ -3,8 +3,10 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { SchemaMissingBanner } from "@/app/dashboard/schema-missing";
 import { AddCouponForm } from "@/app/coupons/add-coupon-form";
 import { getCategoryLabel } from "@/lib/coupons/categories";
+import { formatMoneyILS } from "@/lib/coupons/money";
 
 export const dynamic = "force-dynamic";
 
@@ -35,10 +37,21 @@ export default async function CouponsPage({
 
   const { data: coupons, error } = await supabase
     .from("coupons")
-    .select("id, title, code, notes, tags, expiry_date, is_used, created_at, category")
+    .select(
+      "id, title, code, notes, tags, expiry_date, is_used, created_at, category, coupon_value, coupon_cost, brand_name",
+    )
     .eq("household_id", profile.household_id)
     .order("created_at", { ascending: false })
     .limit(50);
+
+  if (error?.code === "42703") {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-semibold tracking-tight">קופונים</h1>
+        <SchemaMissingBanner />
+      </div>
+    );
+  }
 
   if (error) {
     throw error;
@@ -98,10 +111,18 @@ export default async function CouponsPage({
                           {c.title}
                         </div>
                         <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                          {c.brand_name ? `${c.brand_name} · ` : ""}
                           {getCategoryLabel(c.category) ? `${getCategoryLabel(c.category)} · ` : ""}
                           {c.code ? `קוד: ${c.code}` : "ללא קוד"}
                           {c.expiry_date ? ` · תוקף: ${c.expiry_date}` : ""}
                         </div>
+                        {c.coupon_value != null || c.coupon_cost != null ? (
+                          <div className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                            {c.coupon_value != null ? `שווי: ${formatMoneyILS(c.coupon_value)}` : ""}
+                            {c.coupon_value != null && c.coupon_cost != null ? " · " : ""}
+                            {c.coupon_cost != null ? `עלות: ${formatMoneyILS(c.coupon_cost)}` : ""}
+                          </div>
+                        ) : null}
                         {c.notes ? (
                           <div className="mt-2 line-clamp-2 text-xs text-zinc-600 dark:text-zinc-400">
                             {c.notes}

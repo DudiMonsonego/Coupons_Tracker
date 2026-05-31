@@ -4,10 +4,12 @@ import { CalendarClock, Sparkles, TicketPercent } from "lucide-react";
 import { getSessionProfile } from "@/lib/auth/get-session-profile";
 import { attachCouponImageUrls } from "@/lib/coupons/attach-image-urls";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCouponStatus } from "@/lib/coupons/status";
+import { getCouponStatus, isShownInActiveTab } from "@/lib/coupons/status";
+import { formatMoneyILS } from "@/lib/coupons/money";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DashboardClient } from "@/app/dashboard/dashboard-client";
+import { SchemaMissingBanner } from "@/app/dashboard/schema-missing";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +20,22 @@ export default async function DashboardPage() {
 
   const { data: rawCoupons, error } = await supabase
     .from("coupons")
-    .select("id, title, code, notes, tags, expiry_date, is_used, created_at, image_path, category")
+    .select(
+      "id, title, code, notes, tags, expiry_date, is_used, created_at, image_path, category, coupon_value, coupon_cost, brand_name, logo_url",
+    )
     .eq("household_id", session.householdId)
     .order("created_at", { ascending: false })
     .limit(200);
 
   if (error) {
+    if (error.code === "42703") {
+      return (
+        <div className="space-y-6">
+          <h1 className="text-2xl font-semibold tracking-tight">דשבורד</h1>
+          <SchemaMissingBanner />
+        </div>
+      );
+    }
     throw error;
   }
 
@@ -47,6 +59,21 @@ export default async function DashboardPage() {
     const d = new Date(c.expiry_date);
     return d >= monthStart && d <= monthEnd;
   }).length;
+
+  const savingsThisMonth = (coupons ?? [])
+    .filter((c) => {
+      if (c.is_used || c.coupon_value == null) return false;
+      const s = getCouponStatus({
+        isUsed: c.is_used,
+        expiryDate: c.expiry_date,
+        expiringSoonDays,
+      });
+      if (!isShownInActiveTab(s)) return false;
+      if (!c.expiry_date) return true;
+      const d = new Date(c.expiry_date);
+      return d >= monthStart && d <= monthEnd;
+    })
+    .reduce((sum, c) => sum + Number(c.coupon_value ?? 0), 0);
 
   return (
     <div className="space-y-6">
@@ -113,10 +140,12 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>חסכון החודש</CardTitle>
-            <CardDescription>יתמלא כאשר נוסיף שדות סכום</CardDescription>
+            <CardDescription>שווי קופונים פעילים שפוקעים החודש</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-semibold">—</div>
+            <div className="text-3xl font-semibold">
+              {savingsThisMonth > 0 ? formatMoneyILS(savingsThisMonth) : "—"}
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -5,11 +5,12 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 export function LoginForm() {
   async function signInWithGoogle() {
     const supabase = createSupabaseBrowserClient();
+    const redirectTo = `${window.location.origin}/auth/callback`;
 
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+        redirectTo,
         queryParams: {
           prompt: "select_account",
         },

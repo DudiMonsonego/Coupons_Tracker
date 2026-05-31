@@ -5,9 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Pencil, Trash2, CheckCircle2, Circle, LayoutGrid, List, Search } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { getCategoryLabel } from "@/lib/coupons/categories";
-import { getCouponStatus, isShownInActiveTab } from "@/lib/coupons/status";
+import { BrandLogo } from "@/components/coupons/brand-logo";
 import { CategorySelect } from "@/components/coupons/category-select";
+import { MoneyFields } from "@/components/coupons/money-fields";
+import { getCategoryLabel } from "@/lib/coupons/categories";
+import { formatMoneyILS } from "@/lib/coupons/money";
+import { getCouponStatus, isShownInActiveTab } from "@/lib/coupons/status";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,6 +27,10 @@ export type DashboardCoupon = {
   created_at: string;
   image_url?: string | null;
   category: string | null;
+  coupon_value: number | null;
+  coupon_cost: number | null;
+  brand_name: string | null;
+  logo_url: string | null;
 };
 
 type Props = {
@@ -177,12 +184,22 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
               ) : null}
 
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    {c.title}
-                  </div>
-                  <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-                    {c.code ? `קוד: ${c.code}` : "ללא קוד"} · {formatExpiry(c.expiry_date)}
+                <div className="flex min-w-0 flex-1 items-start gap-2">
+                  <BrandLogo brandName={c.brand_name} logoUrl={c.logo_url} size={36} />
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                      {c.title}
+                    </div>
+                    <div className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
+                      {c.code ? `קוד: ${c.code}` : "ללא קוד"} · {formatExpiry(c.expiry_date)}
+                    </div>
+                    {c.coupon_value != null || c.coupon_cost != null ? (
+                      <div className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                        {c.coupon_value != null ? `שווי: ${formatMoneyILS(c.coupon_value)}` : ""}
+                        {c.coupon_value != null && c.coupon_cost != null ? " · " : ""}
+                        {c.coupon_cost != null ? `עלות: ${formatMoneyILS(c.coupon_cost)}` : ""}
+                      </div>
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
@@ -243,6 +260,21 @@ export function DashboardClient({ coupons, expiringSoonDays }: Props) {
                           שם
                         </label>
                         <Input id={`t-${c.id}`} name="title" defaultValue={c.title} required />
+                      </div>
+                      <MoneyFields
+                        idPrefix={`${c.id}-`}
+                        valueDefault={c.coupon_value != null ? String(c.coupon_value) : ""}
+                        costDefault={c.coupon_cost != null ? String(c.coupon_cost) : ""}
+                      />
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium" htmlFor={`brand-${c.id}`}>
+                          מותג
+                        </label>
+                        <Input
+                          id={`brand-${c.id}`}
+                          name="brand_name"
+                          defaultValue={c.brand_name ?? ""}
+                        />
                       </div>
                       <div className="space-y-2">
                         <label className="block text-sm font-medium" htmlFor={`c-${c.id}`}>

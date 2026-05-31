@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { resolveBrandLogoUrl } from "@/lib/brands/logo-url";
 import { normalizeCategory } from "@/lib/coupons/categories";
+import { parseMoneyInput } from "@/lib/coupons/money";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +24,15 @@ export async function POST(request: Request) {
   const notes = String(formData.get("notes") ?? "").trim();
   const tagsCsv = String(formData.get("tags") ?? "").trim();
   const category = normalizeCategory(formData.get("category"));
+  const couponValue = parseMoneyInput(formData.get("coupon_value"));
+  const couponCost = parseMoneyInput(formData.get("coupon_cost"));
+  const brandName = String(formData.get("brand_name") ?? "").trim() || null;
+  const logoUrl =
+    String(formData.get("logo_url") ?? "").trim() ||
+    resolveBrandLogoUrl({
+      brandDomain: String(formData.get("brand_domain") ?? "").trim() || null,
+      hasBrandLogo: Boolean(brandName),
+    });
 
   const supabase = await createSupabaseServerClient();
   const { data: auth } = await supabase.auth.getUser();
@@ -43,6 +54,10 @@ export async function POST(request: Request) {
       notes: notes || null,
       tags: parseTags(tagsCsv),
       category,
+      coupon_value: couponValue,
+      coupon_cost: couponCost,
+      brand_name: brandName,
+      logo_url: logoUrl,
     })
     .eq("id", id);
 

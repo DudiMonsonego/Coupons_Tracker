@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
+import { resolveBrandLogoUrl } from "@/lib/brands/logo-url";
 import { normalizeCategory } from "@/lib/coupons/categories";
 import { finalizeCouponImage } from "@/lib/coupons/finalize-coupon-image";
+import { parseMoneyInput } from "@/lib/coupons/money";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,14 @@ export async function POST(request: Request) {
   const notes = String(formData.get("notes") ?? "").trim();
   const tagsCsv = String(formData.get("tags") ?? "").trim();
   const category = normalizeCategory(formData.get("category"));
+  const couponValue = parseMoneyInput(formData.get("coupon_value"));
+  const couponCost = parseMoneyInput(formData.get("coupon_cost"));
+  const brandName = String(formData.get("brand_name") ?? "").trim() || null;
+  const logoFromForm = String(formData.get("logo_url") ?? "").trim() || null;
+  const brandDomain = String(formData.get("brand_domain") ?? "").trim() || null;
+  const logoUrl =
+    logoFromForm ??
+    resolveBrandLogoUrl({ brandDomain, hasBrandLogo: Boolean(brandName) });
   const draftImagePath = String(formData.get("draft_image_path") ?? "").trim();
   const imageField = formData.get("image");
 
@@ -56,6 +66,10 @@ export async function POST(request: Request) {
       notes: notes || null,
       tags,
       category,
+      coupon_value: couponValue,
+      coupon_cost: couponCost,
+      brand_name: brandName,
+      logo_url: logoUrl,
     })
     .select("id")
     .single();

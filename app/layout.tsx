@@ -13,6 +13,9 @@ export const metadata: Metadata = {
   description: "ניהול קופונים ושיתוף משפחתי",
 };
 
+// Auth app: skip static prerender at build (needs Supabase env at runtime)
+export const dynamic = "force-dynamic";
+
 export default function RootLayout({
   children,
 }: Readonly<{

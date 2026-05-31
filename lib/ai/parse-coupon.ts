@@ -1,8 +1,10 @@
+import { resolveBrandLogoUrl } from "@/lib/brands/logo-url";
 import {
   categoryIdsForAiPrompt,
   normalizeCategory,
   type CouponCategoryId,
 } from "@/lib/coupons/categories";
+import { extractMoneyFromText } from "@/lib/coupons/money";
 
 export type ParsedCoupon = {
   title: string;
@@ -11,6 +13,11 @@ export type ParsedCoupon = {
   notes?: string;
   tags?: string[];
   category?: CouponCategoryId | null;
+  brand_name?: string | null;
+  brand_domain?: string | null;
+  logo_url?: string | null;
+  coupon_value?: number | null;
+  coupon_cost?: number | null;
 };
 
 export function parseCouponFromText(text: string): ParsedCoupon {
@@ -39,7 +46,22 @@ export function parseCouponFromText(text: string): ParsedCoupon {
   }
 
   parsed.category = guessCategoryFromText(text);
+  const money = extractMoneyFromText(text);
+  parsed.coupon_value = money.value ?? null;
+  parsed.coupon_cost = money.cost ?? null;
+  parsed.brand_name = guessBrandFromText(text);
+  parsed.logo_url = resolveBrandLogoUrl({
+    brandDomain: parsed.brand_domain,
+    hasBrandLogo: Boolean(parsed.brand_name),
+  });
   return parsed;
+}
+
+function guessBrandFromText(text: string): string | null {
+  const firstLine = text.split("\n").map((l) => l.trim()).filter(Boolean)[0];
+  if (!firstLine || firstLine.length > 40) return null;
+  if (/^\d|₪|קוד|CODE/i.test(firstLine)) return null;
+  return firstLine;
 }
 
 function guessCategoryFromText(text: string): CouponCategoryId | null {
@@ -80,7 +102,7 @@ export async function parseCouponFromImage(
       messages: [
         {
           role: "system",
-          content: `You extract coupon/voucher fields from images. Return JSON only with keys: title (string), code (string or null), expiry_date (YYYY-MM-DD or null), notes (string or null), tags (array of strings), category (one of these ids: ${categoryIdsForAiPrompt()}). Pick the best matching category. Understand Hebrew and English.`,
+          content: `You extract coupon/voucher fields from images. Return JSON only with keys: title (string), code (string or null), expiry_date (YYYY-MM-DD or null), notes (string or null), tags (array of strings), category (one of these ids: ${categoryIdsForAiPrompt()}), brand_name (string or null), brand_domain (company website domain like "mcdonalds.co.il" or null), coupon_value (number or null, benefit face value in ILS), coupon_cost (number or null, price paid in ILS), has_brand_logo (boolean, true if a company logo is clearly visible on the coupon). Pick the best matching category. Understand Hebrew and English.`,
         },
         {
           role: "user",
@@ -121,6 +143,13 @@ export async function parseCouponFromImage(
     : [];
 
   const category = normalizeCategory(raw.category);
+  const brand_name = raw.brand_name != null ? String(raw.brand_name).trim() : null;
+  const brand_domain =
+    raw.brand_domain != null ? String(raw.brand_domain).trim() : null;
+  const coupon_value = parseNum(raw.coupon_value);
+  const coupon_cost = parseNum(raw.coupon_cost);
+  const has_brand_logo = raw.has_brand_logo === true;
+  const logo_url = resolveBrandLogoUrl({ brandDomain: brand_domain, hasBrandLogo: has_brand_logo });
 
   return {
     title,
@@ -129,5 +158,17 @@ export async function parseCouponFromImage(
     notes: notes || undefined,
     tags,
     category,
+    brand_name: brand_name || null,
+    brand_domain: brand_domain || null,
+    logo_url,
+    coupon_value,
+    coupon_cost,
   };
+}
+
+function parseNum(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.round(n * 100) / 100;
 }
